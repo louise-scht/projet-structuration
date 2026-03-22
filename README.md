@@ -24,7 +24,7 @@ Le fichier final doit être placé dans le dossier initdb sous le nom init_db_cl
 
 1. On vide Docker Desktop, on veut que la liste soit vide (appuyer sur la corbeille).
 2. S'il y a des fichiers db.sqlite3, on les supprime. 
-3. On ferme les termianals ouvert. 
+3. On ferme les terminals ouvert. 
 4. Sur VsCode, on ouvre le dossier. Ensuite, dans le terminal on tape: 
 ```bash
 docker-compose up --build -d
