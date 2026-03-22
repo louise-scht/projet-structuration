@@ -2,13 +2,30 @@
 
 Ce projet est une plateforme d'analyse et de visualisation du dataset Enron (500 000+ e-mails). 
 
+## Préparation des données
+Téléchager le fichier Projet_Louise_Ileana.zip
+Il faut ajouter manuellement la base de données avant importation
+Créer un dossier nommé initdb à la racine du projet
+Ouvrer le fichier script/essai_pandas.py et verifier que le chemin de dossier de mail Enron est correct
+Puis lancer :
+```bash
+py script/essai_pandas.py
+```
+Conversion en UTF-8:
+Regarder que le fichier est sauvegardé en UTF-8
+```bash
+Reopen with Encoding
+UTF-8
+Save
+```
+Le fichier final doit être placé dans le dossier initdb sous le nom init_db_clean.sql
+
 ## Installation et lancement
 
-1. On vide Docker Desktop, on veut que la liste sooit vide (appuyer sur la corbeille).
-2. Si il y a des fichiers db.sqlite3, on les supprime. 
+1. On vide Docker Desktop, on veut que la liste soit vide (appuyer sur la corbeille).
+2. S'il y a des fichiers db.sqlite3, on les supprime. 
 3. On ferme les termianals ouvert. 
-4. Téléchager le fichier Projet_Louise_Ileana.zip
-5. Sur VsCode, on ouvre le dossier. Ensuite, dans le terminal on tape: 
+4. Sur VsCode, on ouvre le dossier. Ensuite, dans le terminal on tape: 
 ```bash
 docker-compose up --build -d
 ```
@@ -35,6 +52,6 @@ et ensuite,
 ```bash
 py manage.py runserver
 ```
-6. Ctrl+clic que le lien donné par runserver ("http://127.0.0.1:8000/")
+5. Ctrl+clic que le lien donné par runserver ("http://127.0.0.1:8000/")
 
-7. Le site s'affiche dans le navigateur par défaut, certaines actions demandent du temps. 
+6. Le site s'affiche dans le navigateur par défaut, certaines actions demandent du temps. 
