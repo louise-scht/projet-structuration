@@ -1,4 +1,6 @@
 #  Projet Enron Email 
+Ileana Ferry et Louise Sachet, 
+M1 Data Science
 
 Ce projet est une plateforme d'analyse et de visualisation du dataset Enron (500 000+ e-mails). 
 
