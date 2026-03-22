@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Donnée Enron - Analyse E-mails de la société</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 20px; }
+        .nav-tabs { margin-bottom: 20px; }
+        .table-hover tbody tr { cursor: pointer; }
+        .badge-count { font-size: 0.8rem; vertical-align: middle; }
+        .text-date { font-size: 0.9rem; color: #6c757d; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid px-5">
+    <h1 class="mb-4">E-mail Enron</h1>
+
+    <div class="card p-3 mb-4 shadow-sm border-0">
+        <form method="GET" action="{% url 'accueil' %}" class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label fw-bold">Filtre:</label>
+                <input type="text" name="q" class="form-control" 
+                       placeholder="Mots-clés, nom de l'expéditeur..." 
+                       value="{{ query }}">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Du :</label>
+                <input type="date" name="date_debut" class="form-control" value="{{ date_debut }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Au :</label>
+                <input type="date" name="date_fin" class="form-control" value="{{ date_fin }}">
+            </div>
+
+            <div class="col-md-3 d-flex align-items-end">
+                <input type="hidden" name="view" value="{{ view_type }}">
+                <button type="submit" class="btn btn-primary w-100 me-2 shadow-sm">Rechercher</button>
+                <a href="{% url 'accueil' %}?view={{ view_type }}" class="btn btn-outline-secondary">Réinitialiser</a>
+            </div>
+        </form>
+    </div>
+
+    <ul class="nav nav-tabs shadow-sm">
+        <li class="nav-item">
+            <a class="nav-link {% if view_type == 'messages' or not view_type %}active fw-bold{% endif %}" 
+               href="{% url 'accueil' %}?view=messages&q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">
+               Messages
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view_type == 'echanges' %}active fw-bold{% endif %}" 
+               href="{% url 'accueil' %}?view=echanges">Top Échanges</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view_type == 'collabs' %}active fw-bold{% endif %}" 
+               href="{% url 'accueil' %}?view=collabs">Top Collaborateurs</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view_type == 'mots' %}active fw-bold{% endif %}" 
+               href="{% url 'accueil' %}?view=mots">Top Mots</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view_type == 'stats' %}active fw-bold{% endif %}" href="{% url 'statistiques_view' %}">
+                Statistiques
+            </a>
+        </li>
+    </ul>
+
+    <div class="card shadow-sm p-4 border-0">
+
+        {% if view_type == 'messages' or not view_type %}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Boîte de réception <span class="badge bg-secondary badge-count">{{ page_obj.paginator.count }}</span></h3>
+            </div>
+            
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 15%">Date</th>
+                        <th style="width: 25%">Expéditeur</th>
+                        <th>Objet</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for msg in page_obj %}
+                    <tr onclick="window.location='{% url 'detail_message' msg.id_message %}';">
+                        <td class="text-date">
+                            {{ msg.date|date:"d/m/Y H:i"|default:"Date inconnue" }}
+                        </td>
+                        <td>
+                            <strong class="text-primary">{{ msg.expediteur.nom_collaborateur|default:"Externe / Inconnu" }}</strong>
+                            <br><small class="text-muted">{{ msg.expediteur.mail|truncatechars:35 }}</small>
+                        </td>
+                        <td>
+                            <a href="{% url 'detail_message' msg.id_message %}" class="text-decoration-none text-dark">
+                                {{ msg.objet|default:"(Sans objet)"|truncatechars:100 }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center py-5">Aucun message trouvé pour ces critères.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page=1&view=messages&q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">Début</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&view=messages&q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">Précédent</a></li>
+                    {% endif %}
+
+                    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span></li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&view=messages&q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">Suivant</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&view=messages&q={{ query }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">Fin</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+
+        {% elif view_type == 'echanges' %}
+            <h3>Top 10 des interactions</h3>
+            <table class="table table-striped mt-3">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Rang</th>
+                        <th>Expéditeur</th>
+                        <th>Destinataire</th>
+                        <th>Nombre d'échanges</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in top_data %}
+                    <tr>
+                        <td>#{{ forloop.counter }}</td>
+                        <td>{{ item.message__expediteur__nom_collaborateur }}</td>
+                        <td>{{ item.collaborateur__nom_collaborateur }}</td>
+                        <td><span class="badge bg-primary">{{ item.total }} mails</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        {% elif view_type == 'collabs' or view_type == 'mots' %}
+            <h3>Analyse Statistiques : {{ view_type|title }}</h3>
+            <div class="row mt-3">
+                {% for item in top_data %}
+                    <div class="col-md-6 mb-2">
+                        <div class="p-2 border rounded bg-white d-flex justify-content-between align-items-center">
+                            <span>{{ item.expediteur__nom_collaborateur }}{{ item.mot }}</span>
+                            <span class="badge bg-info text-dark">{{ item.total }}{{ item.occurrence }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
