@@ -5,7 +5,7 @@ M1 Data Science
 Ce projet est une plateforme d'analyse et de visualisation du dataset Enron (500 000+ e-mails). 
 
 ## Préparation des données
-Téléchager le fichier Projet_Louise_Ileana.zip
+Téléchager le fichier du projet.
 Il faut ajouter manuellement la base de données avant importation
 Créer un dossier nommé initdb à la racine du projet
 Ouvrer le fichier script/essai_pandas.py et verifier que le chemin de dossier de mail Enron est correct
