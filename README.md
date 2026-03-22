@@ -39,12 +39,8 @@ puis,
 ```bash
 docker-compose exec db psql -U postgres -d postgres_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
 ```
-puis, 
 
-```bash
-py manage.py migrate
-```
-puis, (attention, cette commande prend du temps, environ 3-4 minutes. Ne pas quitter tant que le terminal n'a pas rendu la main)
+puis, (attention, cette commande prend du temps, environ 5-10 minutes. Ne pas quitter tant que le terminal n'a pas rendu la main)
 ```bash
 cmd /c "docker-compose exec -T db psql -U postgres -d postgres_test < ./initdb/init_db_clean.sql"
 ```
