@@ -1,0 +1,137 @@
+import os
+import re
+import pandas as pd
+import email
+from email.utils import parsedate_to_datetime
+from sqlalchemy import create_engine
+
+#configuration
+DB_URL = 'postgresql://postgres:mon_password@localhost:5432/postgres_test' 
+engine = create_engine(DB_URL)
+SOURCE_DIR = r"D:\enron_mail_20150507\maildir" 
+
+#fonction d'extraction
+def parse_email(file_path, root_dir):
+    try:
+        folder_path = os.path.relpath(os.path.dirname(file_path), root_dir)
+        owner_name = folder_path.split(os.sep)[0]
+        with open("\\\\?\\" + file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+            msg_obj = email.message_from_string(content)
+            date_str = msg_obj.get('Date')
+            date_dt = None
+            if date_str:
+                try:
+                    date_dt = parsedate_to_datetime(date_str)
+                except:
+                    date_dt = None
+
+            from_mail = msg_obj.get('From', 'inconnu@enron.com').strip()
+            subject = msg_obj.get('Subject', '(Sans objet)').strip()[:255]
+            to_raw = msg_obj.get('To', '').strip()
+            cc_raw = msg_obj.get('Cc', '').strip()
+            bcc_raw = msg_obj.get('Bcc', '').strip()
+            body = content.split('\n\n', 1)[1] if '\n\n' in content else ""
+
+            return {
+                'owner_folder': owner_name, 
+                'dossier_chemin': folder_path,
+                'date': date_dt,
+                'expediteur_mail': from_mail,
+                'objet': subject,
+                'corps_mail': body,
+                'to_raw': to_raw,
+                'cc_raw': cc_raw,
+                'bcc_raw': bcc_raw
+            }
+    except Exception:
+        return None
+
+# lecture des fichiers
+print("Phase 1 : Lecture des fichiers (Patientez...)")
+data = []
+count = 0 
+for root, _, files in os.walk(SOURCE_DIR):
+    for f in files:
+        res = parse_email(os.path.join(root, f), SOURCE_DIR)
+        if res:
+            data.append(res)
+            count += 1
+            if count % 20000 == 0:
+                print(f"{count} fichiers lus...")
+
+df = pd.DataFrame(data)
+
+#remplissage des tables
+
+#collaborateur
+print("Phase 2 : Création des collaborateurs")
+all_emails = pd.concat([
+    df['expediteur_mail'], 
+    df['to_raw'].str.split(',').explode().str.strip(),
+    df['cc_raw'].str.split(',').explode().str.strip(),
+    df['bcc_raw'].str.split(',').explode().str.strip()
+]).unique()
+
+collabs = pd.DataFrame([e for e in all_emails if e and '@' in str(e)], columns=['mail'])
+collabs['id_collaborateur'] = range(1, len(collabs) + 1)
+collabs['nom_collaborateur'] = collabs['mail'].str.split('@').str[0].str.replace('.', ' ', regex=False).str.title()
+
+collabs.to_sql('collaborateur', engine, if_exists='append', index=False)
+
+#dossier
+print("Phase 3 : Création des dossiers")
+dossiers = df[['dossier_chemin', 'owner_folder']].drop_duplicates().reset_index(drop=True)
+dossiers['id_dossier'] = range(1, len(dossiers) + 1)
+dossiers = dossiers.rename(columns={'owner_folder': 'nom_dossier', 'dossier_chemin': 'chemin_complet'})
+
+#liaison avec id collaborateur
+collabs['nom_folder_match'] = collabs['mail'].str.split('@').str[0].str.replace('.', '-', regex=False)
+dossiers = dossiers.merge(collabs[['nom_folder_match', 'id_collaborateur']], left_on='nom_dossier', right_on='nom_folder_match', how='left')
+
+dossiers[['id_dossier', 'nom_dossier', 'chemin_complet', 'id_collaborateur']].to_sql('dossier', engine, if_exists='append', index=False)
+
+#message
+print("Phase 4 : Envoi des messages...")
+df = df.merge(collabs[['mail', 'id_collaborateur']], left_on='expediteur_mail', right_on='mail', how='left')
+df = df.rename(columns={'id_collaborateur': 'id_expediteur'})
+df = df.merge(dossiers[['chemin_complet', 'id_dossier']], left_on='dossier_chemin', right_on='chemin_complet', how='left')
+
+messages = pd.DataFrame()
+messages['id_message'] = range(1, len(df) + 1)
+messages['id_expediteur'] = df['id_expediteur']
+messages['id_dossier'] = df['id_dossier']
+messages['objet'] = df['objet']
+messages['date'] = pd.to_datetime(df['date'], errors='coerce')
+messages['corps_mail'] = df['corps_mail']
+
+messages.to_sql('message', engine, if_exists='append', index=False)
+
+
+#destinataire
+print("Phase 5 : Décollage des destinataires")
+def process_dest(df_in, col_raw, type_env_label, msg_ids):
+    temp = pd.DataFrame({'raw': df_in[col_raw], 'id_message': msg_ids})
+    temp['email'] = temp['raw'].str.split(',')
+    exploded = temp.explode('email').dropna(subset=['email'])
+    exploded['email'] = exploded['email'].str.strip()
+    exploded = exploded[exploded['email'].str.len() > 5]
+    
+    #liaison pour obtenir l'id_collaborateur
+    exploded = exploded.merge(collabs[['mail', 'id_collaborateur']], left_on='email', right_on='mail', how='left')
+    
+    return exploded[['id_message', 'id_collaborateur']].assign(type_envoie=type_env_label)
+
+msg_ids = messages['id_message']
+dest_to = process_dest(df, 'to_raw', 'To', msg_ids)
+dest_cc = process_dest(df, 'cc_raw', 'Cc', msg_ids)
+dest_bcc = process_dest(df, 'bcc_raw', 'Bcc', msg_ids)
+
+destinataires = pd.concat([dest_to, dest_cc, dest_bcc], ignore_index=True)
+destinataires['id_destinataire'] = range(1, len(destinataires) + 1)
+
+#on enleve les lignes où on n'a pas trouvé de collaborateur (emails externes à Enron par exemple)
+destinataires = destinataires.dropna(subset=['id_collaborateur'])
+
+destinataires.to_sql('destinataire', engine, if_exists='append', index=False)
+print(f"TERMINÉ ! 500 000 mails importés selon ton models.py.")
