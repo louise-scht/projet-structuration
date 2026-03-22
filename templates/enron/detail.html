@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Détail du Message - Enron</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; background-color: #f4f7f6; color: #333; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 900px; margin: auto; }
+        
+        /*En-tête*/
+        .header { border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 15px; }
+        .header h2 { margin-top: 0; color: #2c3e50; }
+        .mail-info p { margin: 8px 0; }
+        
+        /*Style pour les badges des destinataires*/
+        .dest-badge { display: inline-block; background: #e9ecef; padding: 3px 10px; border-radius: 15px; font-size: 0.85rem; margin: 2px; border: 1px solid #dee2e6; color: #495057; }
+        
+        /*Contenu du mail*/
+        .content { white-space: pre-wrap; background: #fafafa; padding: 25px; border: 1px solid #ddd; border-radius: 4px; line-height: 1.6; min-height: 200px; }
+        
+        /*Boutons et liens*/
+        .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 20px; transition: 0.3s; }
+        .btn:hover { background: #0056b3; }
+        
+        /*Section Réponses*/
+        .replies-section { margin-top: 40px; border-top: 3px solid #007bff; padding-top: 20px; }
+        .reply-card { padding: 15px; margin-bottom: 10px; background: #f0f7ff; border-left: 5px solid #007bff; border-radius: 4px; transition: 0.2s; }
+        .reply-card:hover { background: #e6f2ff; transform: translateX(5px); }
+        .reply-link { font-weight: bold; color: #0056b3; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <a href="{% url 'accueil' %}?view=messages" class="btn">Retour à la liste</a>
+
+        
+        {% if precedents %}
+        <div style="margin-bottom: 20px;">
+            <h4 style="color: #6c757d; margin-bottom: 10px;">Message(s) précédent(s) dans ce fil :</h4>
+            {% for prec in precedents %}
+                <div style="padding: 10px; background: #fff; border: 1px dashed #ccc; margin-bottom: 5px; border-radius: 4px;">
+                    <small>{{ prec.date|date:"d/m/Y H:i" }} - <strong>{{ prec.expediteur.nom_collaborateur }}</strong></small><br>
+                    <a href="{% url 'detail_message' prec.id_message %}" style="color: #6c757d; text-decoration: none; font-size: 0.9em;">
+                        {{ prec.objet }}
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+        <hr>
+        {% endif %}
+
+
+        
+        
+        
+        <div class="header">
+            <h2>{{ message.objet|default:"(Pas d'objet)" }}</h2>
+            <div class="mail-info">
+                <p><strong>De :</strong> {{ message.expediteur.nom_collaborateur }} <span style="color: #666;">({{ message.expediteur.mail }})</span></p>
+                
+                <p><strong>À :</strong> 
+                    {% for d in destinataires %}
+                        <span class="dest-badge">{{ d.collaborateur.nom_collaborateur|default:d.collaborateur.mail }}</span>
+                    {% empty %}
+                        <span style="color: #888; font-style: italic;">Aucun destinataire enregistré</span>
+                    {% endfor %}
+                </p>
+                
+                <p><strong>Date :</strong> {{ message.date|date:"d F Y à H:i" }}</p>
+            </div>
+        </div>
+
+        <div class="content">
+            {{ message.corps_mail|safe }}
+        </div>
+
+        <div class="replies-section">
+            <h3>Réponses à ce message (RE:)</h3>
+            <div class="replies-container">
+                {% for rep in reponses %}
+                    <div class="reply-card">
+                        <small style="color: #555;">Envoyé le {{ rep.date|date:"d/m/Y H:i" }} par <strong>{{ rep.expediteur.nom_collaborateur }}</strong></small>
+                        <br>
+                        <a href="{% url 'detail_message' rep.id_message %}" class="reply-link">
+                            {{ rep.objet }}
+                        </a>
+                    </div>
+                {% empty %}
+                    <p style="color: #888; font-style: italic;">Aucune réponse pour ce message.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
+
